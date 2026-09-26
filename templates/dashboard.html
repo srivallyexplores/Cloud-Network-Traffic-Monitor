@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NetMonitor Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+
+        #status {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        canvas {
+            margin-bottom: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>NetMonitor: Real-Time Dashboard</h1>
+
+    <p>Auto-refresh every 10 seconds</p>
+
+    <p id="status">Status: Loading...</p>
+
+    <p id="details"></p>
+
+    <canvas id="latencyChart" width="600" height="200"></canvas>
+
+    <canvas id="arpChart" width="600" height="200"></canvas>
+
+    <canvas id="packetChart" width="600" height="200"></canvas>
+
+    <canvas id="protocolChart" width="600" height="200"></canvas>
+
+    <canvas id="anomalyChart" width="600" height="200"></canvas>
+
+
+    <script>
+
+        const latencyCtx =
+            document.getElementById('latencyChart').getContext('2d');
+
+        const arpCtx =
+            document.getElementById('arpChart').getContext('2d');
+
+        const packetCtx =
+            document.getElementById('packetChart').getContext('2d');
+
+        const protocolCtx =
+            document.getElementById('protocolChart').getContext('2d');
+
+        const anomalyCtx =
+            document.getElementById('anomalyChart').getContext('2d');
+
+
+        let latencyChart;
+        let arpChart;
+        let packetChart;
+        let protocolChart;
+        let anomalyChart;
+
+
+        function updateCharts(data) {
+
+            const {
+                timestamps,
+                packets,
+                arp_issues,
+                latency,
+                tcp_packets,
+                udp_packets,
+                anomalies
+            } = data;
+
+
+            // Update network status
+
+            if (anomalies.length > 0) {
+
+                const latestAnomaly =
+                    anomalies[anomalies.length - 1];
+
+                if (latestAnomaly === 1) {
+
+                    document.getElementById('status').innerText =
+                        'Status: WARNING - Traffic Anomaly Detected';
+
+                    document.getElementById('details').innerText =
+                        'Abnormal network activity detected.';
+
+                } else {
+
+                    document.getElementById('status').innerText =
+                        'Status: Network Normal';
+
+                    document.getElementById('details').innerText =
+                        'No abnormal traffic detected.';
+                }
+            }
+
+
+            // Create charts
+
+            if (!latencyChart) {
+
+                latencyChart = new Chart(latencyCtx, {
+                    type: 'line',
+
+                    data: {
+                        labels: timestamps,
+
+                        datasets: [{
+                            label: 'Average Latency (seconds)',
+                            data: latency,
+                            borderColor: 'blue',
+                            fill: false
+                        }]
+                    }
+                });
+
+
+                arpChart = new Chart(arpCtx, {
+                    type: 'line',
+
+                    data: {
+                        labels: timestamps,
+
+                        datasets: [{
+                            label: 'ARP Issues',
+                            data: arp_issues,
+                            borderColor: 'orange',
+                            fill: false
+                        }]
+                    }
+                });
+
+
+                packetChart = new Chart(packetCtx, {
+                    type: 'line',
+
+                    data: {
+                        labels: timestamps,
+
+                        datasets: [{
+                            label: 'Packets Captured',
+                            data: packets,
+                            borderColor: 'green',
+                            fill: false
+                        }]
+                    }
+                });
+
+
+                protocolChart = new Chart(protocolCtx, {
+                    type: 'line',
+
+                    data: {
+                        labels: timestamps,
+
+                        datasets: [
+
+                            {
+                                label: 'TCP Packets',
+                                data: tcp_packets,
+                                borderColor: 'purple',
+                                fill: false
+                            },
+
+                            {
+                                label: 'UDP Packets',
+                                data: udp_packets,
+                                borderColor: 'red',
+                                fill: false
+                            }
+
+                        ]
+                    }
+                });
+
+
+                anomalyChart = new Chart(anomalyCtx, {
+                    type: 'line',
+
+                    data: {
+                        labels: timestamps,
+
+                        datasets: [{
+                            label: 'Traffic Anomaly',
+                            data: anomalies,
+                            borderColor: 'black',
+                            fill: false,
+                            stepped: true
+                        }]
+                    },
+
+                    options: {
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 1,
+
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+
+            }
+
+
+            // Update existing charts
+
+            else {
+
+                latencyChart.data.labels = timestamps;
+                latencyChart.data.datasets[0].data = latency;
+                latencyChart.update();
+
+
+                arpChart.data.labels = timestamps;
+                arpChart.data.datasets[0].data = arp_issues;
+                arpChart.update();
+
+
+                packetChart.data.labels = timestamps;
+                packetChart.data.datasets[0].data = packets;
+                packetChart.update();
+
+
+                protocolChart.data.labels = timestamps;
+                protocolChart.data.datasets[0].data = tcp_packets;
+                protocolChart.data.datasets[1].data = udp_packets;
+                protocolChart.update();
+
+
+                anomalyChart.data.labels = timestamps;
+                anomalyChart.data.datasets[0].data = anomalies;
+                anomalyChart.update();
+            }
+        }
+
+
+        function fetchData() {
+
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => updateCharts(data));
+
+        }
+
+
+        // Load data immediately
+
+        fetchData();
+
+
+        // Refresh every 10 seconds
+
+        setInterval(fetchData, 10000);
+
+    </script>
+
+</body>
+</html>
